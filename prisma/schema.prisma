@@ -1,0 +1,96 @@
+// Scheduler — course tracking with dated rows, progress bars, streaks and heatmaps.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Auth.js models
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  courses       Course[]
+  createdAt     DateTime  @default(now())
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @id
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// ---------------------------------------------------------------------------
+// App models
+// ---------------------------------------------------------------------------
+
+model Course {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     Item[]
+
+  @@index([userId, position])
+}
+
+model Item {
+  id       String @id @default(cuid())
+  courseId String
+  title    String
+
+  /// The day this row is planned for. Date-only; stored at UTC midnight.
+  scheduledOn DateTime @db.Date
+
+  /// Ordering within a single day, so several rows on one date keep their order.
+  position Int @default(0)
+
+  /// When the checkbox was actually ticked. Drives streaks and heatmaps —
+  /// deliberately NOT the same as scheduledOn, which is only ever the plan.
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId, scheduledOn, position])
+  @@index([courseId, completedAt])
+}
