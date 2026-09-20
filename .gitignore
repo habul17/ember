@@ -30,8 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files — real secrets never get committed, the template always does
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +40,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+
+# assistant / editor tooling
+/.claude
+/.agents
+/.windsurf
+/AGENTS.md
+/CLAUDE.md
+/skills-lock.json
+
+# personal commit plan, not part of the project
+/COMMITS.md
