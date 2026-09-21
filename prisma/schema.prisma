@@ -1,4 +1,4 @@
-// Scheduler — course tracking with dated rows, progress bars, streaks and heatmaps.
+// Ember — course planning with dated rows, progress bars, streaks and heatmaps.
 
 generator client {
   provider = "prisma-client"
