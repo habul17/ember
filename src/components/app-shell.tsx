@@ -337,9 +337,9 @@ export function AppShell({
         }
         onDelete={(id) => run(() => deleteItem(id), "Could not delete that row")}
         onReschedule={openReschedule}
-        onAdd={(startDay, text) =>
+        onAdd={(startDay, text, layout) =>
           run(async () => {
-            const count = await addManyItems(active.id, startDay, text);
+            const count = await addManyItems(active.id, startDay, text, layout);
             toast.success(`Added ${count} ${count === 1 ? "row" : "rows"}`);
           }, "Could not add those rows")
         }

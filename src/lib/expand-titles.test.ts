@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { daySpan, expandTitles } from "@/lib/expand-titles";
+import { daySpan, expandTitles, rowDays } from "@/lib/expand-titles";
 
 describe("expandTitles", () => {
   it("makes one row per line", () => {
@@ -41,5 +41,27 @@ describe("daySpan", () => {
 
   it("does not run backwards when there is nothing to add", () => {
     expect(daySpan("2026-09-19", 0)).toEqual({ from: "2026-09-19", to: "2026-09-19" });
+  });
+
+  it("stays on the start day when every row shares it", () => {
+    expect(daySpan("2026-09-19", 5, "sameDay")).toEqual({ from: "2026-09-19", to: "2026-09-19" });
+  });
+});
+
+describe("rowDays", () => {
+  it("gives each row the next day when spreading", () => {
+    expect(rowDays("2026-09-30", 3)).toEqual(["2026-09-30", "2026-10-01", "2026-10-02"]);
+  });
+
+  it("gives every row the start day when they share one", () => {
+    expect(rowDays("2026-09-30", 3, "sameDay")).toEqual([
+      "2026-09-30",
+      "2026-09-30",
+      "2026-09-30",
+    ]);
+  });
+
+  it("returns nothing for no rows", () => {
+    expect(rowDays("2026-09-30", 0, "sameDay")).toEqual([]);
   });
 });

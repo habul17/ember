@@ -5,6 +5,7 @@ import { Fragment } from "react";
 import { AddRowsDialog } from "@/components/add-rows-dialog";
 import { ItemRow, type ClientItem } from "@/components/item-row";
 import { addDays, formatDay, todayKey, type DayKey } from "@/lib/dates";
+import type { Layout } from "@/lib/expand-titles";
 import { TODAY_MARKER_ID } from "@/lib/today-marker";
 
 export type ClientCourse = {
@@ -28,7 +29,7 @@ export function CoursePanel({
   onRename: (id: string, title: string) => void;
   onDelete: (id: string) => void;
   onReschedule: (id: string) => void;
-  onAdd: (startDay: DayKey, text: string) => void;
+  onAdd: (startDay: DayKey, text: string, layout: Layout) => void;
 }) {
   const items = course.items;
 

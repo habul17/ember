@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { addDays, fromDayKey, toDayKey, type DayKey } from "@/lib/dates";
+import { fromDayKey, toDayKey, type DayKey } from "@/lib/dates";
+import { rowDays, type Layout } from "@/lib/expand-titles";
 import { planReschedule, type RescheduleMode } from "@/lib/reschedule";
 
 async function requireUserId(): Promise<string> {
@@ -87,11 +88,19 @@ async function nextPosition(courseId: string, day: DayKey): Promise<number> {
 }
 
 /**
- * Bulk add: one row per line, laid onto consecutive days from `startDay`.
+ * Bulk add: one row per line, laid onto consecutive days from `startDay`, or
+ * all onto `startDay` itself when `layout` is `sameDay`.
  * Lines are taken verbatim — tidying happens before the text reaches the app.
  */
-export async function addManyItems(courseId: string, startDay: DayKey, text: string) {
+export async function addManyItems(
+  courseId: string,
+  startDay: DayKey,
+  text: string,
+  layout: Layout = "spread",
+) {
   await ownedCourse(courseId);
+  // Anything other than the one known value falls back to the old behaviour.
+  const sameDay = layout === "sameDay";
 
   const titles = text
     .split("\n")
@@ -101,12 +110,16 @@ export async function addManyItems(courseId: string, startDay: DayKey, text: str
 
   if (titles.length === 0) throw new Error("Nothing to add");
 
+  const days = rowDays(startDay, titles.length, sameDay ? "sameDay" : "spread");
+  // Rows sharing a day keep the pasted order, after anything already there.
+  const firstPosition = sameDay ? await nextPosition(courseId, startDay) : 0;
+
   await prisma.item.createMany({
     data: titles.map((title, i) => ({
       courseId,
       title,
-      scheduledOn: fromDayKey(addDays(startDay, i)),
-      position: 0,
+      scheduledOn: fromDayKey(days[i]),
+      position: sameDay ? firstPosition + i : 0,
     })),
   });
 

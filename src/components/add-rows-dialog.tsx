@@ -18,7 +18,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDay, type DayKey } from "@/lib/dates";
-import { MAX_REPEAT, daySpan, expandTitles } from "@/lib/expand-titles";
+import { MAX_REPEAT, daySpan, expandTitles, type Layout } from "@/lib/expand-titles";
+import { cn } from "@/lib/utils";
 
 /**
  * The one way rows get added.
@@ -34,6 +35,11 @@ const submitHint =
     ? "\u2318 + Enter"
     : "Ctrl + Enter";
 
+const LAYOUTS: { value: Layout; label: string }[] = [
+  { value: "spread", label: "One per day" },
+  { value: "sameDay", label: "All on one day" },
+];
+
 export function AddRowsDialog({
   defaultDay,
   today,
@@ -41,21 +47,24 @@ export function AddRowsDialog({
 }: {
   defaultDay: DayKey;
   today: DayKey;
-  /** Receives the already-expanded titles, one per line, one per day. */
-  onAdd: (startDay: DayKey, text: string) => void;
+  /** Receives the already-expanded titles, one per line, and how to date them. */
+  onAdd: (startDay: DayKey, text: string, layout: Layout) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [startDay, setStartDay] = useState<DayKey>(defaultDay);
   const [text, setText] = useState("");
   const [repeat, setRepeat] = useState("1");
+  const [layout, setLayout] = useState<Layout>("spread");
+  const sameDay = layout === "sameDay";
 
-  const titles = expandTitles(text, Number(repeat));
-  const span = daySpan(startDay, titles.length);
+  // "Days per title" only means something when rows get a day each.
+  const titles = expandTitles(text, sameDay ? 1 : Number(repeat));
+  const span = daySpan(startDay, titles.length, layout);
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
     if (titles.length === 0) return;
-    onAdd(startDay, titles.join("\n"));
+    onAdd(startDay, titles.join("\n"), layout);
     setText("");
     setRepeat("1");
     setOpen(false);
@@ -85,8 +94,7 @@ export function AddRowsDialog({
           <DialogHeader>
             <DialogTitle>Add rows</DialogTitle>
             <DialogDescription>
-              One title per line. Each row lands on its own day, starting from the date you
-              pick.
+              One title per line. Give each row its own day, or put them all on one day.
             </DialogDescription>
           </DialogHeader>
 
@@ -127,9 +135,33 @@ export function AddRowsDialog({
               />
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div
+              role="radiogroup"
+              aria-label="How to date the rows"
+              className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1"
+            >
+              {LAYOUTS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={layout === option.value}
+                  onClick={() => setLayout(option.value)}
+                  className={cn(
+                    "h-8 rounded-md text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                    layout === option.value
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            <div className={cn("grid gap-5", !sameDay && "sm:grid-cols-2")}>
               <div className="space-y-2.5">
-                <Label htmlFor="add-start">Starting</Label>
+                <Label htmlFor="add-start">{sameDay ? "Day" : "Starting"}</Label>
                 <Input
                   id="add-start"
                   type="date"
@@ -138,33 +170,38 @@ export function AddRowsDialog({
                 />
               </div>
 
-              <div className="space-y-2.5">
-                <Label htmlFor="add-repeat">Days per title</Label>
-                <Input
-                  id="add-repeat"
-                  type="number"
-                  min={1}
-                  max={MAX_REPEAT}
-                  value={repeat}
-                  onChange={(event) => setRepeat(event.target.value)}
-                />
-              </div>
+              {!sameDay && (
+                <div className="space-y-2.5">
+                  <Label htmlFor="add-repeat">Days per title</Label>
+                  <Input
+                    id="add-repeat"
+                    type="number"
+                    min={1}
+                    max={MAX_REPEAT}
+                    value={repeat}
+                    onChange={(event) => setRepeat(event.target.value)}
+                  />
+                </div>
+              )}
             </div>
 
-            <p className="pt-0.5 text-xs leading-relaxed text-muted-foreground">
-              Set days per title above 1 to split a long video: the same title repeats over
-              that many days before the next one starts.
-            </p>
+            {!sameDay && (
+              <p className="pt-0.5 text-xs leading-relaxed text-muted-foreground">
+                Set days per title above 1 to split a long video: the same title repeats over
+                that many days before the next one starts.
+              </p>
+            )}
           </div>
 
           <DialogFooter className="gap-3 border-t pt-5 sm:justify-between">
             <p className="self-center text-xs tabular-nums text-muted-foreground">
               {titles.length === 0
                 ? "Nothing to add yet"
-                : `${titles.length} ${titles.length === 1 ? "row" : "rows"} · ${formatDay(
-                    span.from,
-                    today,
-                  )} → ${formatDay(span.to, today)}`}
+                : `${titles.length} ${titles.length === 1 ? "row" : "rows"} · ${
+                    span.from === span.to
+                      ? formatDay(span.from, today)
+                      : `${formatDay(span.from, today)} → ${formatDay(span.to, today)}`
+                  }`}
             </p>
             <Button type="submit" disabled={titles.length === 0}>
               Add {titles.length > 0 ? titles.length : ""}{" "}

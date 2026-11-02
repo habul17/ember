@@ -21,7 +21,25 @@ export function expandTitles(text: string, repeat = 1): string[] {
   return lines.flatMap((line) => Array.from({ length: times }, () => line));
 }
 
-/** The span those rows will cover, one row per day from `startDay`. */
-export function daySpan(startDay: DayKey, count: number): { from: DayKey; to: DayKey } {
+/**
+ * How pasted rows get their dates: `spread` puts one row on each day from the
+ * start date, `sameDay` puts every row on the start date.
+ */
+export type Layout = "spread" | "sameDay";
+
+/** The day each row lands on, in the order the rows were pasted. */
+export function rowDays(startDay: DayKey, count: number, layout: Layout = "spread"): DayKey[] {
+  return Array.from({ length: count }, (_, i) =>
+    layout === "sameDay" ? startDay : addDays(startDay, i),
+  );
+}
+
+/** The span those rows will cover, from `startDay`. */
+export function daySpan(
+  startDay: DayKey,
+  count: number,
+  layout: Layout = "spread",
+): { from: DayKey; to: DayKey } {
+  if (layout === "sameDay") return { from: startDay, to: startDay };
   return { from: startDay, to: addDays(startDay, Math.max(0, count - 1)) };
 }
